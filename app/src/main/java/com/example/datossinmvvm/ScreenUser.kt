@@ -7,9 +7,19 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import androidx.room.Room
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenUser(modifier: Modifier) {
     val context = LocalContext.current
@@ -38,80 +49,73 @@ fun ScreenUser(modifier: Modifier) {
 
     val coroutineScope = rememberCoroutineScope()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ){
-        Spacer(Modifier.height(50.dp))
-        TextField(
-            value = id,
-            onValueChange = { id = it },
-            label = { Text("ID (solo lectura)") },
-            readOnly = true,
-            singleLine = true
-        )
-        TextField(
-            value = firstName,
-            onValueChange = { firstName = it },
-            label = { Text("First Name: ") },
-            singleLine = true
-        )
-        TextField(
-            value = lastName,
-            onValueChange = { lastName = it },
-            label = { Text("Last Name:") },
-            singleLine = true
-        )
-        Button(
-            onClick = {
-                val user = User(0,firstName, lastName)
-                coroutineScope.launch {
-                    AgregarUsuario(user = user, dao = dao)
-                }
-                firstName = ""
-                lastName = ""
-            }
-        ) {
-            Text("Agregar Usuario", fontSize=16.sp)
-        }
-        Button(
-            onClick = {
-                val user = User(0,firstName, lastName)
-                coroutineScope.launch {
-                    val data = getUsers( dao = dao)
-                    dataUser.value = data
-                }
-            }
-        ) {
-            Text("Listar Usuarios", fontSize=16.sp)
-        }
-        Text(
-            text = dataUser.value, fontSize = 20.sp
-        )
-
-        Button(
-            onClick = {
-                // Asegúrate de que primero se seleccione un usuario válido
-                if (firstName.isNotEmpty() && lastName.isNotEmpty()) {
-                    val user = User(0, firstName, lastName)  // Crea un nuevo usuario
-                    coroutineScope.launch {
-                        EliminarUsuario(user = user, dao = dao)  // Llama a la función para eliminar
-                        // Actualiza la lista o maneja cualquier estado necesario después de la eliminación
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Gestión de Usuarios") },
+                actions = {
+                    // Botón para agregar usuarios
+                    IconButton(onClick = {
+                        val user = User(0, firstName, lastName)
+                        coroutineScope.launch {
+                            AgregarUsuario(user = user, dao = dao)
+                        }
+                        firstName = ""
+                        lastName = ""
+                    }) {
+                        Icon(Icons.Default.Add, contentDescription = "Agregar Usuario")
                     }
-                    firstName = ""  // Limpia los campos de entrada
-                    lastName = ""
-                } else {
-                    // Opcional: manejar el caso en que los campos estén vacíos
-                    Log.e("User", "Por favor, ingrese un nombre y apellido válidos.")
+                    // Botón para listar usuarios
+                    IconButton(onClick = {
+                        coroutineScope.launch {
+                            val data = getUsers(dao)
+                            dataUser.value = data
+                        }
+                    }) {
+                        Icon(Icons.Default.List, contentDescription = "Listar Usuarios")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            )
+        },
+        content = { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp)
+            ) {
+                Spacer(Modifier.height(50.dp))
+                TextField(
+                    value = firstName,
+                    onValueChange = { firstName = it },
+                    label = { Text("First Name:") },
+                    singleLine = true
+                )
+                Spacer(Modifier.height(16.dp))
+                TextField(
+                    value = lastName,
+                    onValueChange = { lastName = it },
+                    label = { Text("Last Name:") },
+                    singleLine = true
+                )
+                Spacer(Modifier.height(16.dp))
+                // Botón para eliminar el último usuario
+                Button(onClick = {
+                    coroutineScope.launch {
+                        eliminarUltimoUsuario(dao)
+                    }
+                }) {
+                    Text("Eliminar Último Usuario", fontSize = 16.sp)
                 }
+                Spacer(Modifier.height(16.dp))
+                // Mostrar datos de usuarios
+                Text(text = dataUser.value, fontSize = 20.sp)
             }
-        ) {
-            Text("Eliminar Usuario", fontSize = 16.sp)
         }
-
-
-    }
+    )
 }
 
 @Composable
@@ -146,11 +150,11 @@ suspend fun AgregarUsuario(user: User, dao:UserDao): Unit {
     //}
 }
 
-suspend fun EliminarUsuario(user: User, dao: UserDao): Unit {
-    try {
-        dao.delete(user)  // Usando el método delete del UserDao
-    } catch (e: Exception) {
-        Log.e("User", "Error: delete: ${e.message}")
+suspend fun eliminarUltimoUsuario(dao: UserDao) {
+    val users = dao.getAll()
+    if (users.isNotEmpty()) {
+        val ultimoUsuario = users.last()
+        dao.delete(ultimoUsuario)
     }
 }
 

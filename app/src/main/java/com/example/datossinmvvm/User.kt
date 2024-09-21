@@ -4,9 +4,12 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-@Entity
+@Entity //tabla en la bace datos
 data class User(
-    @PrimaryKey(autoGenerate = true) val uid: Int = 0,
-    @ColumnInfo(name = "first_name") val firstName: String?,
-    @ColumnInfo(name = "last_name") val lastName: String?
+    @PrimaryKey(autoGenerate = true) //tmb se auto genera
+    val uid: Int = 0,
+    @ColumnInfo(name = "first_name")
+    val firstName: String?,
+    @ColumnInfo(name = "last_name")
+    val lastName: String?
 )
